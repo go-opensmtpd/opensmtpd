@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"syscall"
 )
 
 const (
@@ -21,6 +20,7 @@ const (
 	maxDomainPartSize = (255 + 1)
 )
 
+// MessageHeader is the header of an imsg frame (struct imsg_hdr)
 type MessageHeader struct {
 	Type   uint32
 	Len    uint16
@@ -29,6 +29,7 @@ type MessageHeader struct {
 	PID    uint32
 }
 
+// Message implements OpenBSD imsg
 type Message struct {
 	MessageHeader
 	Data []byte
@@ -51,6 +52,8 @@ func (m *Message) reset() {
 	m.buf = m.buf[:0]
 }
 
+// ReadFrom reads a message from the specified net.Conn, parses the header and
+// reads the data payload.
 func (m *Message) ReadFrom(c net.Conn) error {
 	m.reset()
 
@@ -73,19 +76,7 @@ func (m *Message) ReadFrom(c net.Conn) error {
 	return nil
 }
 
-func (m *Message) SendTo(fd int) error {
-	m.Len = uint16(len(m.Data)) + imsgHeaderSize
-
-	buf := new(bytes.Buffer)
-	//log.Printf("imsg header: %+v\n", m.MessageHeader)
-	if err := binary.Write(buf, binary.LittleEndian, &m.MessageHeader); err != nil {
-		return err
-	}
-	buf.Write(m.Data)
-	//log.Printf("imsg send: %d / %q\n", buf.Len(), buf.Bytes())
-	return syscall.Sendmsg(fd, buf.Bytes(), nil, nil, 0)
-}
-
+// WriteTo marshals the Message to wire format and sends it to the net.Conn
 func (m *Message) WriteTo(c net.Conn) error {
 	m.Len = uint16(len(m.Data)) + imsgHeaderSize
 
@@ -148,6 +139,7 @@ func (m *Message) GetID() (uint64, error) {
 	return u, nil
 }
 
+// Sockaddr emulates the mess that is struct sockaddr
 type Sockaddr []byte
 
 func (sa Sockaddr) IP() net.IP {

@@ -146,6 +146,7 @@ func responseName(c int) string {
 	return fmt.Sprintf("UNKNOWN %d", c)
 }
 
+// Filter implements the OpenSMTPD filter API
 type Filter struct {
 	Name    string
 	Version uint32
@@ -202,6 +203,7 @@ func (f *Filter) OnDataLine(fn func(*Session, string) error) {
 	f.hooks |= HookDataLine
 }
 
+// Register our filter with OpenSMTPD
 func (f *Filter) Register() error {
 	var err error
 	if f.m == nil {
@@ -247,6 +249,8 @@ func (f *Filter) Register() error {
 	return nil
 }
 
+// Serve communicates with OpenSMTPD in a loop, until either one of the
+// parties closes stdin.
 func (f *Filter) Serve() error {
 	var err error
 	if f.m == nil {
@@ -485,4 +489,14 @@ func (f *Filter) respond(s *Session, status, code int, line string) error {
 	}
 
 	return nil
+}
+
+// ConnectQuery are the QUERY_CONNECT arguments
+type ConnectQuery struct {
+	Local, Remote net.Addr
+	Hostname      string
+}
+
+func (q ConnectQuery) String() string {
+	return fmt.Sprintf("%s -> %s [hostname=%s]", q.Remote, q.Local, q.Hostname)
 }
