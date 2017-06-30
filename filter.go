@@ -148,58 +148,75 @@ func responseName(c int) string {
 
 // Filter implements the OpenSMTPD filter API
 type Filter struct {
+	// Connect callback
+	Connect func(*Session, *ConnectQuery) error
+
+	// HELO callback
+	HELO func(*Session, string) error
+
+	// MAIL FROM callback
+	MAIL func(*Session, string, string) error
+
+	// RCPT TO callback
+	RCPT func(*Session, string, string) error
+
+	// DATA callback
+	DATA func(*Session) error
+
+	// DataLine callback
+	DataLine func(*Session, string) error
+
+	// EOM (end of message) callback
+	EOM func(*Session, uint32) error
+
+	// Reset callback
+	Reset func(*Session) error
+
+	// Disconnect callback
+	Disconnect func(*Session) error
+
+	// Commit callback
+	Commit func(*Session) error
+
 	Name    string
 	Version uint32
 
 	c net.Conn
 	m *Message
 
-	hooks int
-	flags int
-	ready bool
-
-	hook struct {
-		connect    func(*Session, *ConnectQuery) error
-		helo       func(*Session, string) error
-		mail       func(*Session, string, string) error
-		rcpt       func(*Session, string, string) error
-		data       func(*Session) error
-		dataline   func(*Session, string) error
-		eom        func(*Session, uint32) error
-		reset      func(*Session) error
-		disconnect func(*Session) error
-		commit     func(*Session) error
-	}
+	hooks   int
+	flags   int
+	ready   bool
 	session *lru.Cache
 }
 
 func (f *Filter) OnConnect(fn func(*Session, *ConnectQuery) error) {
-	f.hook.connect = fn
+	f.Connect = fn
 	f.hooks |= HookConnect
 }
 
 func (f *Filter) OnHELO(fn func(*Session, string) error) {
-	f.hook.helo = fn
+	f.HELO = fn
 	f.hooks |= HookHELO
 }
 
 func (f *Filter) OnMAIL(fn func(*Session, string, string) error) {
-	f.hook.mail = fn
+	f.MAIL = fn
 	f.hooks |= HookMAIL
 }
 
 func (f *Filter) OnRCPT(fn func(*Session, string, string) error) {
-	f.hook.rcpt = fn
+	f.RCPT = fn
 	f.hooks |= HookRCPT
 }
 
 func (f *Filter) OnDATA(fn func(*Session) error) {
-	f.hook.data = fn
+	f.DATA = fn
 	f.hooks |= HookDATA
 }
 
 func (f *Filter) OnDataLine(fn func(*Session, string) error) {
-	f.hook.dataline = fn
+	f.DataLine = fn
 	f.hooks |= HookDataLine
 }
 
@@ -216,6 +233,35 @@ func (f *Filter) Register() error {
 	}
 	if err = f.m.ReadFrom(f.c); err != nil {
 		return err
+	}
+
+	// Fill hooks mask
+	if f.Connect != nil {
+		f.hooks |= HookConnect
+	}
+	if f.HELO != nil {
+		f.hooks |= HookHELO
+	}
+	if f.MAIL != nil {
+		f.hooks |= HookMAIL
+	}
+	if f.RCPT != nil {
+		f.hooks |= HookRCPT
+	}
+	if f.DATA != nil {
+		f.hooks |= HookDATA
+	}
+	if f.DataLine != nil {
+		f.hooks |= HookDataLine
+	}
+	if f.EOM != nil {
+		f.hooks |= HookEOM
+	}
+	if f.Disconnect != nil {
+		f.hooks |= HookDisconnect
+	}
+	if f.Commit != nil {
+		f.hooks |= HookCommit
 	}
 
 	if t, ok := filterTypeName[f.m.Type]; ok {
@@ -388,8 +434,8 @@ func (f *Filter) handleQuery() (err error) {
 		}
 
 		log.Printf("query connect: %s\n", query)
-		if f.hook.connect != nil {
-			return f.hook.connect(s, &query)
+		if f.Connect != nil {
+			return f.Connect(s, &query)
 		}
 
 		log.Printf("filter: WARNING: no connect callback\n")
@@ -401,8 +447,8 @@ func (f *Filter) handleQuery() (err error) {
 		}
 
 		log.Printf("query HELO: %q\n", line)
-		if f.hook.helo != nil {
-			return f.hook.helo(s, line)
+		if f.HELO != nil {
+			return f.HELO(s, line)
 		}
 
 		log.Printf("filter: WARNING: no HELO callback\n")
@@ -415,8 +461,8 @@ func (f *Filter) handleQuery() (err error) {
 		}
 
 		log.Printf("query MAIL: %s\n", user+"@"+domain)
-		if f.hook.mail != nil {
-			return f.hook.mail(s, user, domain)
+		if f.MAIL != nil {
+			return f.MAIL(s, user, domain)
 		}
 
 		log.Printf("filter: WARNING: no MAIL callback\n")
@@ -429,16 +475,16 @@ func (f *Filter) handleQuery() (err error) {
 		}
 
 		log.Printf("query RCPT: %s\n", user+"@"+domain)
-		if f.hook.rcpt != nil {
-			return f.hook.rcpt(s, user, domain)
+		if f.RCPT != nil {
+			return f.RCPT(s, user, domain)
 		}
 
 		log.Printf("filter: WARNING: no RCPT callback\n")
 		return f.respond(s, FilterOK, 0, "")
 
 	case QueryDATA:
-		if f.hook.data != nil {
-			return f.hook.data(s)
+		if f.DATA != nil {
+			return f.DATA(s)
 		}
 
 		log.Printf("filter: WARNING: no DATA callback\n")
@@ -450,8 +496,8 @@ func (f *Filter) handleQuery() (err error) {
 			return
 		}
 
-		if f.hook.eom != nil {
-			return f.hook.eom(s, dataLen)
+		if f.EOM != nil {
+			return f.EOM(s, dataLen)
 		}
 
 		log.Printf("filter: WARNING: no EOM callback\n")

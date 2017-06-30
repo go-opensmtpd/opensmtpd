@@ -43,6 +43,7 @@ func procTableName(t uint32) string {
 	return fmt.Sprintf("UNKNOWN %d", t)
 }
 
+// Table implements the OpenSMTPD table API
 type Table struct {
 	// Update callback
 	Update func() (int, error)
