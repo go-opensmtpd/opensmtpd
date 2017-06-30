@@ -85,7 +85,7 @@ func onConnect(s *opensmtpd.Session, query *opensmtpd.ConnectQuery) error {
 
 	var (
 		result string
-		lsited bool
+		listed bool
 		host   = reverse(ip)
 		err    error
 	)
@@ -146,16 +146,16 @@ func main() {
 		debugf("ignore: %s\n", ipnet)
 	}
 
-	f := new(opensmtpd.Filter)
+	filter := &opensmtpd.Filter{
+		Connect: onConnect,
+		DATA:    onDATA,
+	}
 
-	f.OnConnect(onConnect)
-	f.OnDATA(onDATA)
-
-	if err = f.Register(); err != nil {
+	if err = filter.Register(); err != nil {
 		log.Fatalln(err)
 	}
 
-	if err = f.Serve(); err != nil {
+	if err = filter.Serve(); err != nil {
 		log.Fatalln(err)
 	}
 }

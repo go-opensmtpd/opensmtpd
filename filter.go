@@ -186,36 +186,6 @@ type Filter struct {
 	session *lru.Cache
 }
 
-func (f *Filter) OnConnect(fn func(*Session, *ConnectQuery) error) {
-	f.Connect = fn
-	f.hooks |= hookConnect
-}
-
-func (f *Filter) OnHELO(fn func(*Session, string) error) {
-	f.HELO = fn
-	f.hooks |= hookHELO
-}
-
-func (f *Filter) OnMAIL(fn func(*Session, string, string) error) {
-	f.MAIL = fn
-	f.hooks |= hookMAIL
-}
-
-func (f *Filter) OnRCPT(fn func(*Session, string, string) error) {
-	f.RCPT = fn
-	f.hooks |= hookRCPT
-}
-
-func (f *Filter) OnDATA(fn func(*Session) error) {
-	f.DATA = fn
-	f.hooks |= hookDATA
-}
-
-func (f *Filter) OnDataLine(fn func(*Session, string) error) {
-	f.DataLine = fn
-	f.hooks |= hookDataLine
-}
-
 // Register our filter with OpenSMTPD
 func (f *Filter) Register() error {
 	var err error
