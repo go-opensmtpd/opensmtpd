@@ -5,33 +5,33 @@ import (
 )
 
 const (
-	M_INT = iota
-	M_UINT32
-	M_SIZET
-	M_TIME
-	M_STRING
-	M_DATA
-	M_ID
-	M_EVPID
-	M_MSGID
-	M_SOCKADDR
-	M_MAILADDR
-	M_ENVELOPE
+	mINT = iota
+	mUINT32
+	mSIZET
+	mTIME
+	mSTRING
+	mDATA
+	mID
+	mEVPID
+	mMSGID
+	mSOCKADDR
+	mMAILADDR
+	mENVELOPE
 )
 
 var mprocTypeName = map[uint8]string{
-	M_INT:      "M_INT",
-	M_UINT32:   "M_UINT32",
-	M_SIZET:    "M_SIZET",
-	M_TIME:     "M_TIME",
-	M_STRING:   "M_STRING",
-	M_DATA:     "M_DATA",
-	M_ID:       "M_ID",
-	M_EVPID:    "M_EVPID",
-	M_MSGID:    "M_MSGID",
-	M_SOCKADDR: "M_SOCKADDR",
-	M_MAILADDR: "M_MAILADDR",
-	M_ENVELOPE: "M_ENVELOPE",
+	mINT:      "M_INT",
+	mUINT32:   "M_UINT32",
+	mSIZET:    "M_SIZET",
+	mTIME:     "M_TIME",
+	mSTRING:   "M_STRING",
+	mDATA:     "M_DATA",
+	mID:       "M_ID",
+	mEVPID:    "M_EVPID",
+	mMSGID:    "M_MSGID",
+	mSOCKADDR: "M_SOCKADDR",
+	mMAILADDR: "M_MAILADDR",
+	mENVELOPE: "M_ENVELOPE",
 }
 
 func mprocType(t uint8) string {
@@ -41,11 +41,11 @@ func mprocType(t uint8) string {
 	return fmt.Sprintf("UNKNOWN %d", t)
 }
 
-type MProcTypeErr struct {
+type mprocTypeErr struct {
 	want, got uint8
 }
 
-func (err MProcTypeErr) Error() string {
+func (err mprocTypeErr) Error() string {
 	return fmt.Sprintf("mproc: expected type %s, got %s",
 		mprocType(err.want), mprocType(err.got))
 }

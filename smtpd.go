@@ -6,6 +6,17 @@ import (
 	"strings"
 )
 
+const (
+	// FilterVersion is the supported filter API version
+	FilterVersion = 51
+
+	// QueueVersion is the supported queue API version
+	QueueVersion = 1
+
+	// TableVersion is the supported table API version
+	TableVersion = 1
+)
+
 var (
 	// Debug flag
 	Debug bool

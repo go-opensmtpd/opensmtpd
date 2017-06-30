@@ -11,23 +11,19 @@ import (
 )
 
 const (
-	FilterVersion = 51
-)
-
-const (
-	TypeFilterRegister uint32 = iota
-	TypeFilterEvent
-	TypeFilterQuery
-	TypeFilterPipe
-	TypeFilterResponse
+	typeFilterRegister uint32 = iota
+	typeFilterEvent
+	typeFilterquery
+	typeFilterPipe
+	typeFilterResponse
 )
 
 var filterTypeName = map[uint32]string{
-	TypeFilterRegister: "IMSG_FILTER_REGISTER",
-	TypeFilterEvent:    "IMSG_FILTER_EVENT",
-	TypeFilterQuery:    "IMSG_FILTER_QUERY",
-	TypeFilterPipe:     "IMSG_FILTER_PIPE",
-	TypeFilterResponse: "IMSG_FILTER_RESPONSE",
+	typeFilterRegister: "IMSG_FILTER_REGISTER",
+	typeFilterEvent:    "IMSG_FILTER_EVENT",
+	typeFilterquery:    "IMSG_FILTER_QUERY",
+	typeFilterPipe:     "IMSG_FILTER_PIPE",
+	typeFilterResponse: "IMSG_FILTER_RESPONSE",
 }
 
 func filterName(t uint32) string {
@@ -38,31 +34,31 @@ func filterName(t uint32) string {
 }
 
 const (
-	HookConnect = 1 << iota
-	HookHELO
-	HookMAIL
-	HookRCPT
-	HookDATA
-	HookEOM
-	HookReset
-	HookDisconnect
-	HookCommit
-	HookRollback
-	HookDataLine
+	hookConnect = 1 << iota
+	hookHELO
+	hookMAIL
+	hookRCPT
+	hookDATA
+	hookEOM
+	hookReset
+	hookDisconnect
+	hookCommit
+	hookRollback
+	hookDataLine
 )
 
 var hookTypeName = map[uint16]string{
-	HookConnect:    "HOOK_CONNECT",
-	HookHELO:       "HOOK_HELO",
-	HookMAIL:       "HOOK_MAIL",
-	HookRCPT:       "HOOK_RCPT",
-	HookDATA:       "HOOK_DATA",
-	HookEOM:        "HOOK_EOM",
-	HookReset:      "HOOK_RESET",
-	HookDisconnect: "HOOK_DISCONNECT",
-	HookCommit:     "HOOK_COMMIT",
-	HookRollback:   "HOOK_ROLLBACK",
-	HookDataLine:   "HOOK_DATALINE",
+	hookConnect:    "HOOK_CONNECT",
+	hookHELO:       "HOOK_HELO",
+	hookMAIL:       "HOOK_MAIL",
+	hookRCPT:       "HOOK_RCPT",
+	hookDATA:       "HOOK_DATA",
+	hookEOM:        "HOOK_EOM",
+	hookReset:      "HOOK_RESET",
+	hookDisconnect: "HOOK_DISCONNECT",
+	hookCommit:     "HOOK_COMMIT",
+	hookRollback:   "HOOK_ROLLBACK",
+	hookDataLine:   "HOOK_DATALINE",
 }
 
 func hookName(h uint16) string {
@@ -76,21 +72,21 @@ func hookName(h uint16) string {
 }
 
 const (
-	EventConnect = iota
-	EventReset
-	EventDisconnect
-	EventTXBegin
-	EventTXCommit
-	EventTXRollback
+	eventConnect = iota
+	eventReset
+	eventDisconnect
+	eventTXBegin
+	eventTXCommit
+	eventTXRollback
 )
 
 var eventTypeName = map[int]string{
-	EventConnect:    "EVENT_CONNECT",
-	EventReset:      "EVENT_RESET",
-	EventDisconnect: "EVENT_DISCONNECT",
-	EventTXBegin:    "EVENT_TX_BEGIN",
-	EventTXCommit:   "EVENT_TX_COMMIT",
-	EventTXRollback: "EVENT_TX_ROLLBACK",
+	eventConnect:    "EVENT_CONNECT",
+	eventReset:      "EVENT_RESET",
+	eventDisconnect: "EVENT_DISCONNECT",
+	eventTXBegin:    "EVENT_TX_BEGIN",
+	eventTXCommit:   "EVENT_TX_COMMIT",
+	eventTXRollback: "EVENT_TX_ROLLBACK",
 }
 
 func eventName(t int) string {
@@ -101,23 +97,23 @@ func eventName(t int) string {
 }
 
 const (
-	QueryConnect = iota
-	QueryHELO
-	QueryMAIL
-	QueryRCPT
-	QueryDATA
-	QueryEOM
-	QueryDataLine
+	queryConnect = iota
+	queryHELO
+	queryMAIL
+	queryRCPT
+	queryDATA
+	queryEOM
+	queryDataLine
 )
 
 var queryTypeName = map[int]string{
-	QueryConnect:  "QUERY_CONNECT",
-	QueryHELO:     "QUERY_HELO",
-	QueryMAIL:     "QUERY_MAIL",
-	QueryRCPT:     "QUERY_RCPT",
-	QueryDATA:     "QUERY_DATA",
-	QueryEOM:      "QUERY_EOM",
-	QueryDataLine: "QUERY_DATALINE",
+	queryConnect:  "QUERY_CONNECT",
+	queryHELO:     "QUERY_HELO",
+	queryMAIL:     "QUERY_MAIL",
+	queryRCPT:     "QUERY_RCPT",
+	queryDATA:     "QUERY_DATA",
+	queryEOM:      "QUERY_EOM",
+	queryDataLine: "QUERY_DATALINE",
 }
 
 func queryName(t int) string {
@@ -182,7 +178,7 @@ type Filter struct {
 	Version uint32
 
 	c net.Conn
-	m *Message
+	m *message
 
 	hooks   int
 	flags   int
@@ -192,42 +188,42 @@ type Filter struct {
 
 func (f *Filter) OnConnect(fn func(*Session, *ConnectQuery) error) {
 	f.Connect = fn
-	f.hooks |= HookConnect
+	f.hooks |= hookConnect
 }
 
 func (f *Filter) OnHELO(fn func(*Session, string) error) {
 	f.HELO = fn
-	f.hooks |= HookHELO
+	f.hooks |= hookHELO
 }
 
 func (f *Filter) OnMAIL(fn func(*Session, string, string) error) {
 	f.MAIL = fn
-	f.hooks |= HookMAIL
+	f.hooks |= hookMAIL
 }
 
 func (f *Filter) OnRCPT(fn func(*Session, string, string) error) {
 	f.RCPT = fn
-	f.hooks |= HookRCPT
+	f.hooks |= hookRCPT
 }
 
 func (f *Filter) OnDATA(fn func(*Session) error) {
 	f.DATA = fn
-	f.hooks |= HookDATA
+	f.hooks |= hookDATA
 }
 
 func (f *Filter) OnDataLine(fn func(*Session, string) error) {
 	f.DataLine = fn
-	f.hooks |= HookDataLine
+	f.hooks |= hookDataLine
 }
 
 // Register our filter with OpenSMTPD
 func (f *Filter) Register() error {
 	var err error
 	if f.m == nil {
-		f.m = new(Message)
+		f.m = new(message)
 	}
 	if f.c == nil {
-		if f.c, err = NewConn(0); err != nil {
+		if f.c, err = newConn(0); err != nil {
 			return err
 		}
 	}
@@ -237,31 +233,31 @@ func (f *Filter) Register() error {
 
 	// Fill hooks mask
 	if f.Connect != nil {
-		f.hooks |= HookConnect
+		f.hooks |= hookConnect
 	}
 	if f.HELO != nil {
-		f.hooks |= HookHELO
+		f.hooks |= hookHELO
 	}
 	if f.MAIL != nil {
-		f.hooks |= HookMAIL
+		f.hooks |= hookMAIL
 	}
 	if f.RCPT != nil {
-		f.hooks |= HookRCPT
+		f.hooks |= hookRCPT
 	}
 	if f.DATA != nil {
-		f.hooks |= HookDATA
+		f.hooks |= hookDATA
 	}
 	if f.DataLine != nil {
-		f.hooks |= HookDataLine
+		f.hooks |= hookDataLine
 	}
 	if f.EOM != nil {
-		f.hooks |= HookEOM
+		f.hooks |= hookEOM
 	}
 	if f.Disconnect != nil {
-		f.hooks |= HookDisconnect
+		f.hooks |= hookDisconnect
 	}
 	if f.Commit != nil {
-		f.hooks |= HookCommit
+		f.hooks |= hookCommit
 	}
 
 	if t, ok := filterTypeName[f.m.Type]; ok {
@@ -271,7 +267,7 @@ func (f *Filter) Register() error {
 	}
 
 	switch f.m.Type {
-	case TypeFilterRegister:
+	case typeFilterRegister:
 		var err error
 		if f.Version, err = f.m.GetTypeUint32(); err != nil {
 			return err
@@ -282,7 +278,7 @@ func (f *Filter) Register() error {
 		log.Printf("register version=%d,name=%q\n", f.Version, f.Name)
 
 		f.m.reset()
-		f.m.Type = TypeFilterRegister
+		f.m.Type = typeFilterRegister
 		f.m.PutTypeInt(f.hooks)
 		f.m.PutTypeInt(f.flags)
 		if err = f.m.WriteTo(f.c); err != nil {
@@ -292,6 +288,7 @@ func (f *Filter) Register() error {
 		return fmt.Errorf("filter: unexpected imsg type=%s\n", filterTypeName[f.m.Type])
 	}
 
+	f.ready = true
 	return nil
 }
 
@@ -299,8 +296,15 @@ func (f *Filter) Register() error {
 // parties closes stdin.
 func (f *Filter) Serve() error {
 	var err error
+
+	if !f.ready {
+		if err = f.Register(); err != nil {
+			return err
+		}
+	}
+
 	if f.m == nil {
-		f.m = new(Message)
+		f.m = new(message)
 	}
 	if f.session == nil {
 		if f.session, err = lru.New(1024); err != nil {
@@ -308,13 +312,12 @@ func (f *Filter) Serve() error {
 		}
 	}
 	if f.c == nil {
-		if f.c, err = NewConn(0); err != nil {
+		if f.c, err = newConn(0); err != nil {
 			return err
 		}
 	}
 
 	for {
-		//log.Printf("fdcount: %d [pid=%d]\n", fdCount(), os.Getpid())
 		if err := f.m.ReadFrom(f.c); err != nil {
 			if err.Error() != "resource temporarily unavailable" {
 				return err
@@ -334,13 +337,13 @@ func (f *Filter) handle() (err error) {
 	}
 
 	switch f.m.Type {
-	case TypeFilterEvent:
+	case typeFilterEvent:
 		if err = f.handleEvent(); err != nil {
 			return
 		}
 
-	case TypeFilterQuery:
-		if err = f.handleQuery(); err != nil {
+	case typeFilterquery:
+		if err = f.handlequery(); err != nil {
 			return
 		}
 	}
@@ -381,16 +384,16 @@ func (f *Filter) handleEvent() (err error) {
 	log.Printf("fdcount: %d [pid=%d]\n", fdCount(), os.Getpid())
 
 	switch t {
-	case EventConnect:
+	case eventConnect:
 		f.session.Add(id, NewSession(f, id))
-	case EventDisconnect:
+	case eventDisconnect:
 		f.session.Remove(id)
 	}
 
 	return
 }
 
-func (f *Filter) handleQuery() (err error) {
+func (f *Filter) handlequery() (err error) {
 	var (
 		id, qid uint64
 		t       int
@@ -421,7 +424,7 @@ func (f *Filter) handleQuery() (err error) {
 	s.qid = qid
 
 	switch t {
-	case QueryConnect:
+	case queryConnect:
 		var query ConnectQuery
 		if query.Local, err = f.m.GetTypeSockaddr(); err != nil {
 			return
@@ -440,7 +443,7 @@ func (f *Filter) handleQuery() (err error) {
 
 		log.Printf("filter: WARNING: no connect callback\n")
 
-	case QueryHELO:
+	case queryHELO:
 		var line string
 		if line, err = f.m.GetTypeString(); err != nil {
 			return
@@ -454,7 +457,7 @@ func (f *Filter) handleQuery() (err error) {
 		log.Printf("filter: WARNING: no HELO callback\n")
 		return f.respond(s, FilterOK, 0, "")
 
-	case QueryMAIL:
+	case queryMAIL:
 		var user, domain string
 		if user, domain, err = f.m.GetTypeMailaddr(); err != nil {
 			return
@@ -468,7 +471,7 @@ func (f *Filter) handleQuery() (err error) {
 		log.Printf("filter: WARNING: no MAIL callback\n")
 		return f.respond(s, FilterOK, 0, "")
 
-	case QueryRCPT:
+	case queryRCPT:
 		var user, domain string
 		if user, domain, err = f.m.GetTypeMailaddr(); err != nil {
 			return
@@ -482,7 +485,7 @@ func (f *Filter) handleQuery() (err error) {
 		log.Printf("filter: WARNING: no RCPT callback\n")
 		return f.respond(s, FilterOK, 0, "")
 
-	case QueryDATA:
+	case queryDATA:
 		if f.DATA != nil {
 			return f.DATA(s)
 		}
@@ -490,7 +493,7 @@ func (f *Filter) handleQuery() (err error) {
 		log.Printf("filter: WARNING: no DATA callback\n")
 		return f.respond(s, FilterOK, 0, "")
 
-	case QueryEOM:
+	case queryEOM:
 		var dataLen uint32
 		if dataLen, err = f.m.GetTypeUint32(); err != nil {
 			return
@@ -508,18 +511,18 @@ func (f *Filter) handleQuery() (err error) {
 }
 
 func (f *Filter) respond(s *Session, status, code int, line string) error {
-	log.Printf("filter: %s %s [code=%d,line=%q]\n", filterName(TypeFilterResponse), responseName(status), code, line)
+	log.Printf("filter: %s %s [code=%d,line=%q]\n", filterName(typeFilterResponse), responseName(status), code, line)
 
-	if s.qtype == QueryEOM {
+	if s.qtype == queryEOM {
 		// Not implemented
 		return nil
 	}
 
-	m := new(Message)
-	m.Type = TypeFilterResponse
+	m := new(message)
+	m.Type = typeFilterResponse
 	m.PutTypeID(s.qid)
 	m.PutTypeInt(s.qtype)
-	if s.qtype == QueryEOM {
+	if s.qtype == queryEOM {
 		// Not imlemented
 		return nil
 	}

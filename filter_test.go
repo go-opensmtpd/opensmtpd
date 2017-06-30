@@ -14,14 +14,15 @@ func ExampleFilter() {
 	}
 
 	// Add another hook
-	filter.OnMAIL(func(session *Session, user, domain string) error {
+	filter.MAIL = func(session *Session, user, domain string) error {
 		if strings.ToLower(domain) == "example.org" {
 			return session.Reject()
 		}
 		return session.Accept()
-	})
+	}
 
-	// Register our filter with smtpd
+	// Register our filter with smtpd. This step is optional and will
+	// be performed by Serve() if omitted.
 	if err := filter.Register(); err != nil {
 		panic(err)
 	}

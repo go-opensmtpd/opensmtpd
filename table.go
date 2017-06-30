@@ -11,29 +11,25 @@ import (
 )
 
 const (
-	TableAPIVersion = 1
-)
-
-const (
-	ProcTableOK = iota
-	ProcTableFail
-	ProcTableOpen
-	ProcTableClose
-	ProcTableUpdate
-	ProcTableCheck
-	ProcTableLookup
-	ProcTableFetch
+	procTableOK = iota
+	procTableFail
+	procTableOpen
+	procTableClose
+	procTableUpdate
+	procTableCheck
+	procTableLookup
+	procTableFetch
 )
 
 var procTableTypeName = map[uint32]string{
-	ProcTableOK:     "PROC_TABLE_OK",
-	ProcTableFail:   "PROC_TABLE_FAIL",
-	ProcTableOpen:   "PROC_TABLE_OPEN",
-	ProcTableClose:  "PROC_TABLE_CLOSE",
-	ProcTableUpdate: "PROC_TABLE_UPDATE",
-	ProcTableCheck:  "PROC_TABLE_CHECK",
-	ProcTableLookup: "PROC_TABLE_LOOKUP",
-	ProcTableFetch:  "PROC_TABLE_FETCH",
+	procTableOK:     "PROC_TABLE_OK",
+	procTableFail:   "PROC_TABLE_FAIL",
+	procTableOpen:   "PROC_TABLE_OPEN",
+	procTableClose:  "PROC_TABLE_CLOSE",
+	procTableUpdate: "PROC_TABLE_UPDATE",
+	procTableCheck:  "PROC_TABLE_CHECK",
+	procTableLookup: "PROC_TABLE_LOOKUP",
+	procTableFetch:  "PROC_TABLE_FETCH",
 }
 
 func procTableName(t uint32) string {
@@ -61,18 +57,18 @@ type Table struct {
 	Close func() error
 
 	c      net.Conn
-	m      *Message
+	m      *message
 	closed bool
 }
 
 func (t *Table) Serve() error {
 	var err error
 
-	if t.c, err = NewConn(0); err != nil {
+	if t.c, err = newConn(0); err != nil {
 		return err
 	}
 
-	t.m = new(Message)
+	t.m = new(message)
 
 	for !t.closed {
 		if err = t.m.ReadFrom(t.c); err != nil {
@@ -96,15 +92,15 @@ type tableOpenParams struct {
 
 func (t *Table) dispatch() (err error) {
 	switch t.m.Type {
-	case ProcTableOpen:
+	case procTableOpen:
 		/*
 			var op tableOpenParams
 			if err = t.getMessage(&op, maxLineSize+4); err != nil {
 				return
 			}
 
-			if op.Version != TableAPIVersion {
-				fatalf("table: bad API version %d (we support %d)", op.Version, TableAPIVersion)
+			if op.Version != TableVersion {
+				fatalf("table: bad API version %d (we support %d)", op.Version, TableVersion)
 			}
 			if bytes.IndexByte(op.Name[:], 0) <= 0 {
 				fatal("table: no name supplied")
@@ -113,8 +109,8 @@ func (t *Table) dispatch() (err error) {
 		var version uint32
 		if version, err = t.m.GetUint32(); err != nil {
 			return
-		} else if version != TableAPIVersion {
-			fatalf("table: expected API version %d, got %d", TableAPIVersion, version)
+		} else if version != TableVersion {
+			fatalf("table: expected API version %d, got %d", TableVersion, version)
 		}
 
 		var name string
@@ -126,15 +122,15 @@ func (t *Table) dispatch() (err error) {
 
 		debugf("table: version=%d,name=%q\n", version, name)
 
-		m := new(Message)
-		m.Type = ProcTableOK
+		m := new(message)
+		m.Type = procTableOK
 		m.Len = imsgHeaderSize
 		m.PID = uint32(os.Getpid())
 		if err = m.WriteTo(t.c); err != nil {
 			return
 		}
 
-	case ProcTableUpdate:
+	case procTableUpdate:
 		var r = 1
 
 		if t.Update != nil {
@@ -143,14 +139,14 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(Message)
-		m.Type = ProcTableOK
+		m := new(message)
+		m.Type = procTableOK
 		m.PutInt(r)
 		if err = m.WriteTo(t.c); err != nil {
 			return
 		}
 
-	case ProcTableClose:
+	case procTableClose:
 		if t.Close != nil {
 			if err = t.Close(); err != nil {
 				return
@@ -160,7 +156,7 @@ func (t *Table) dispatch() (err error) {
 		t.closed = true
 		return
 
-	case ProcTableCheck:
+	case procTableCheck:
 		var service int
 		if service, err = t.m.GetInt(); err != nil {
 			return
@@ -188,7 +184,7 @@ func (t *Table) dispatch() (err error) {
 
 		log.Printf("table_check: result=%d\n", r)
 
-	case ProcTableLookup:
+	case procTableLookup:
 		var service int
 		if service, err = t.m.GetInt(); err != nil {
 			return
@@ -214,8 +210,8 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(Message)
-		m.Type = ProcTableOK
+		m := new(message)
+		m.Type = procTableOK
 		m.PID = uint32(os.Getpid())
 		if val == "" {
 			m.PutInt(-1)
@@ -227,7 +223,7 @@ func (t *Table) dispatch() (err error) {
 			return
 		}
 
-	case ProcTableFetch:
+	case procTableFetch:
 		var service int
 		if service, err = t.m.GetInt(); err != nil {
 			return
@@ -248,8 +244,8 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(Message)
-		m.Type = ProcTableOK
+		m := new(message)
+		m.Type = procTableOK
 		m.PID = uint32(os.Getpid())
 		if val == "" {
 			m.PutInt(-1)
