@@ -66,13 +66,15 @@ func (m *Message) ReadFrom(c net.Conn) error {
 	if err := binary.Read(r, binary.LittleEndian, &m.MessageHeader); err != nil {
 		return err
 	}
+	debugf("imsg header: %+v\n", m.MessageHeader)
 
 	data := make([]byte, m.MessageHeader.Len-imsgHeaderSize)
 	if _, err := c.Read(data); err != nil {
 		return err
 	}
-
 	m.Data = data
+	debugf("imsg data: %d / %q\n", len(m.Data), m.Data)
+
 	return nil
 }
 
@@ -81,12 +83,12 @@ func (m *Message) WriteTo(c net.Conn) error {
 	m.Len = uint16(len(m.Data)) + imsgHeaderSize
 
 	buf := new(bytes.Buffer)
-	//log.Printf("imsg header: %+v\n", m.MessageHeader)
+	debugf("imsg header: %+v\n", m.MessageHeader)
 	if err := binary.Write(buf, binary.LittleEndian, &m.MessageHeader); err != nil {
 		return err
 	}
 	buf.Write(m.Data)
-	//log.Printf("imsg send: %d / %q\n", buf.Len(), buf.Bytes())
+	debugf("imsg send: %d / %q\n", buf.Len(), buf.Bytes())
 
 	_, err := c.Write(buf.Bytes())
 	return err
@@ -225,6 +227,13 @@ func (m *Message) GetTypeUint32() (uint32, error) {
 		return 0, err
 	}
 	return m.GetUint32()
+}
+
+func (m *Message) GetTypeSize() (uint64, error) {
+	if err := m.GetType(M_SIZET); err != nil {
+		return 0, err
+	}
+	return m.GetSize()
 }
 
 func (m *Message) GetTypeString() (string, error) {

@@ -239,7 +239,7 @@ func (f *Filter) Register() error {
 		f.m.Type = TypeFilterRegister
 		f.m.PutTypeInt(f.hooks)
 		f.m.PutTypeInt(f.flags)
-		if err = f.m.SendTo(0); err != nil {
+		if err = f.m.WriteTo(f.c); err != nil {
 			return err
 		}
 	default:
