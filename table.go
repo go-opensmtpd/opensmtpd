@@ -39,21 +39,6 @@ func procTableName(t uint32) string {
 	return fmt.Sprintf("UNKNOWN %d", t)
 }
 
-// Table services.
-const (
-	TableAlias       = 0x001 /* returns struct expand	*/
-	TableDomain      = 0x002 /* returns struct destination	*/
-	TableCredentials = 0x004 /* returns struct credentials	*/
-	TableNetAddr     = 0x008 /* returns struct netaddr	*/
-	TableUserInfo    = 0x010 /* returns struct userinfo	*/
-	TableSource      = 0x020 /* returns struct source	*/
-	TableMailAddr    = 0x040 /* returns struct mailaddr	*/
-	TableAddrName    = 0x080 /* returns struct addrname	*/
-	TableMailAddrMap = 0x100 /* returns struct maddrmap	*/
-	TableRelayHost   = 0x200 /* returns struct relayhost	*/
-	TableString      = 0x400
-)
-
 // Table implements the OpenSMTPD table API
 type Table struct {
 	// Update callback
@@ -72,7 +57,7 @@ type Table struct {
 	Close func() error
 
 	c      net.Conn
-	m      *Message
+	m      *message
 	closed bool
 }
 
@@ -83,7 +68,7 @@ func (t *Table) Serve() error {
 		return err
 	}
 
-	t.m = new(Message)
+	t.m = new(message)
 
 	for !t.closed {
 		if err = t.m.ReadFrom(t.c); err != nil {
@@ -137,7 +122,7 @@ func (t *Table) dispatch() (err error) {
 
 		debugf("table: version=%d name=%q\n", version, name)
 
-		m := new(Message)
+		m := new(message)
 		m.Header.Type = procTableOK
 		m.Header.Len = imsgHeaderSize
 		m.Header.PID = uint32(os.Getpid())
@@ -154,7 +139,7 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(Message)
+		m := new(message)
 		m.Header.Type = procTableOK
 		m.PutInt(r)
 		if err = m.WriteTo(t.c); err != nil {
@@ -199,7 +184,7 @@ func (t *Table) dispatch() (err error) {
 
 		log.Printf("table_check: result=%d\n", r)
 
-		m := new(Message)
+		m := new(message)
 		m.Header.Type = procTableOK
 		m.Header.PID = uint32(os.Getpid())
 		m.PutInt(r)
@@ -233,7 +218,7 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(Message)
+		m := new(message)
 		m.Header.Type = procTableOK
 		m.Header.PID = uint32(os.Getpid())
 		if val == "" {
@@ -267,7 +252,7 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(Message)
+		m := new(message)
 		m.Header.Type = procTableOK
 		m.Header.PID = uint32(os.Getpid())
 		if val == "" {

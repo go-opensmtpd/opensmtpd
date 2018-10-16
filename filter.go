@@ -178,7 +178,7 @@ type Filter struct {
 	Version uint32
 
 	c net.Conn
-	m *Message
+	m *message
 
 	hooks   int
 	flags   int
@@ -190,7 +190,7 @@ type Filter struct {
 func (f *Filter) Register() error {
 	var err error
 	if f.m == nil {
-		f.m = new(Message)
+		f.m = new(message)
 	}
 	if f.c == nil {
 		if f.c, err = newConn(0); err != nil {
@@ -274,7 +274,7 @@ func (f *Filter) Serve() error {
 	}
 
 	if f.m == nil {
-		f.m = new(Message)
+		f.m = new(message)
 	}
 	if f.session == nil {
 		if f.session, err = lru.New(1024); err != nil {
@@ -488,7 +488,7 @@ func (f *Filter) respond(s *Session, status, code int, line string) error {
 		return nil
 	}
 
-	m := new(Message)
+	m := new(message)
 	m.Header.Type = typeFilterResponse
 	m.PutTypeID(s.qid)
 	m.PutTypeInt(s.qtype)

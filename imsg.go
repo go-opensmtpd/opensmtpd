@@ -20,8 +20,8 @@ const (
 	maxDomainPartSize = (255 + 1)
 )
 
-// MessageHeader is the header of an imsg frame (struct imsg_hdr)
-type MessageHeader struct {
+// messageHeader is the header of an imsg frame (struct imsg_hdr)
+type messageHeader struct {
 	Type   uint32
 	Len    uint16
 	Flags  uint16
@@ -30,10 +30,10 @@ type MessageHeader struct {
 }
 
 // message implements OpenBSD imsg
-type Message struct {
-	Header MessageHeader
+type message struct {
+	Header messageHeader
 
-	// Data is the Message payload.
+	// Data is the message payload.
 	Data []byte
 
 	// rpos is the read position in the current Data
@@ -43,7 +43,7 @@ type Message struct {
 	buf []byte
 }
 
-func (m *Message) reset() {
+func (m *message) reset() {
 	m.Header.Type = 0
 	m.Header.Len = 0
 	m.Header.Flags = 0
@@ -56,7 +56,7 @@ func (m *Message) reset() {
 
 // ReadFrom reads a message from the specified net.Conn, parses the header and
 // reads the data payload.
-func (m *Message) ReadFrom(r io.Reader) error {
+func (m *message) ReadFrom(r io.Reader) error {
 	m.reset()
 
 	head := make([]byte, imsgHeaderSize)
@@ -81,7 +81,7 @@ func (m *Message) ReadFrom(r io.Reader) error {
 }
 
 // WriteTo marshals the message to wire format and sends it to the net.Conn
-func (m *Message) WriteTo(w io.Writer) error {
+func (m *message) WriteTo(w io.Writer) error {
 	m.Header.Len = uint16(len(m.Data)) + imsgHeaderSize
 
 	buf := new(bytes.Buffer)
@@ -96,7 +96,7 @@ func (m *Message) WriteTo(w io.Writer) error {
 	return err
 }
 
-func (m *Message) GetInt() (int, error) {
+func (m *message) GetInt() (int, error) {
 	if m.rpos+4 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -105,7 +105,7 @@ func (m *Message) GetInt() (int, error) {
 	return int(i), nil
 }
 
-func (m *Message) GetUint32() (uint32, error) {
+func (m *message) GetUint32() (uint32, error) {
 	if m.rpos+4 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -114,7 +114,7 @@ func (m *Message) GetUint32() (uint32, error) {
 	return u, nil
 }
 
-func (m *Message) GetSize() (uint64, error) {
+func (m *message) GetSize() (uint64, error) {
 	if m.rpos+8 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -123,7 +123,7 @@ func (m *Message) GetSize() (uint64, error) {
 	return u, nil
 }
 
-func (m *Message) GetString() (string, error) {
+func (m *message) GetString() (string, error) {
 	o := bytes.IndexByte(m.Data[m.rpos:], 0)
 	if o < 0 {
 		return "", errors.New("imsg: string not NULL-terminated")
@@ -134,7 +134,7 @@ func (m *Message) GetString() (string, error) {
 	return s, nil
 }
 
-func (m *Message) GetID() (uint64, error) {
+func (m *message) GetID() (uint64, error) {
 	if m.rpos+8 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -176,7 +176,7 @@ func (sa Sockaddr) String() string {
 	return fmt.Sprintf("%s:%d", sa.IP(), sa.Port())
 }
 
-func (m *Message) GetSockaddr() (net.Addr, error) {
+func (m *message) GetSockaddr() (net.Addr, error) {
 	s, err := m.GetSize()
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func (m *Message) GetSockaddr() (net.Addr, error) {
 	return a, nil
 }
 
-func (m *Message) GetMailaddr() (user, domain string, err error) {
+func (m *message) GetMailaddr() (user, domain string, err error) {
 	var buf [maxLocalPartSize + maxDomainPartSize]byte
 	if maxLocalPartSize+maxDomainPartSize > len(m.Data[m.rpos:]) {
 		return "", "", io.ErrShortBuffer
@@ -204,7 +204,7 @@ func (m *Message) GetMailaddr() (user, domain string, err error) {
 	return
 }
 
-func (m *Message) GetType(t uint8) error {
+func (m *message) GetType(t uint8) error {
 	if m.rpos >= len(m.Data) {
 		return io.ErrShortBuffer
 	}
@@ -217,102 +217,102 @@ func (m *Message) GetType(t uint8) error {
 	return nil
 }
 
-func (m *Message) GetTypeInt() (int, error) {
+func (m *message) GetTypeInt() (int, error) {
 	if err := m.GetType(mINT); err != nil {
 		return 0, err
 	}
 	return m.GetInt()
 }
 
-func (m *Message) GetTypeUint32() (uint32, error) {
+func (m *message) GetTypeUint32() (uint32, error) {
 	if err := m.GetType(mUINT32); err != nil {
 		return 0, err
 	}
 	return m.GetUint32()
 }
 
-func (m *Message) GetTypeSize() (uint64, error) {
+func (m *message) GetTypeSize() (uint64, error) {
 	if err := m.GetType(mSIZET); err != nil {
 		return 0, err
 	}
 	return m.GetSize()
 }
 
-func (m *Message) GetTypeString() (string, error) {
+func (m *message) GetTypeString() (string, error) {
 	if err := m.GetType(mSTRING); err != nil {
 		return "", err
 	}
 	return m.GetString()
 }
 
-func (m *Message) GetTypeID() (uint64, error) {
+func (m *message) GetTypeID() (uint64, error) {
 	if err := m.GetType(mID); err != nil {
 		return 0, err
 	}
 	return m.GetID()
 }
 
-func (m *Message) GetTypeSockaddr() (net.Addr, error) {
+func (m *message) GetTypeSockaddr() (net.Addr, error) {
 	if err := m.GetType(mSOCKADDR); err != nil {
 		return nil, err
 	}
 	return m.GetSockaddr()
 }
 
-func (m *Message) GetTypeMailaddr() (user, domain string, err error) {
+func (m *message) GetTypeMailaddr() (user, domain string, err error) {
 	if err = m.GetType(mMAILADDR); err != nil {
 		return
 	}
 	return m.GetMailaddr()
 }
 
-func (m *Message) PutInt(v int) {
+func (m *message) PutInt(v int) {
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], uint32(v))
 	m.Data = append(m.Data, b[:]...)
 	m.Header.Len += 4
 }
 
-func (m *Message) PutUint32(v uint32) {
+func (m *message) PutUint32(v uint32) {
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], v)
 	m.Data = append(m.Data, b[:]...)
 	m.Header.Len += 4
 }
 
-func (m *Message) PutString(s string) {
+func (m *message) PutString(s string) {
 	m.Data = append(m.Data, append([]byte(s), 0)...)
 	m.Header.Len += uint16(len(s)) + 1
 }
 
-func (m *Message) PutID(id uint64) {
+func (m *message) PutID(id uint64) {
 	var b [8]byte
 	binary.LittleEndian.PutUint64(b[:], id)
 	m.Data = append(m.Data, b[:]...)
 	m.Header.Len += 8
 }
 
-func (m *Message) PutType(t uint8) {
+func (m *message) PutType(t uint8) {
 	m.Data = append(m.Data, t)
 	m.Header.Len += 1
 }
 
-func (m *Message) PutTypeInt(v int) {
+func (m *message) PutTypeInt(v int) {
 	m.PutType(mINT)
 	m.PutInt(v)
 }
 
-func (m *Message) PutTypeUint32(v uint32) {
+func (m *message) PutTypeUint32(v uint32) {
 	m.PutType(mUINT32)
 	m.PutUint32(v)
 }
 
-func (m *Message) PutTypeString(s string) {
+func (m *message) PutTypeString(s string) {
 	m.PutType(mSTRING)
 	m.PutString(s)
 }
 
-func (m *Message) PutTypeID(id uint64) {
+func (m *message) PutTypeID(id uint64) {
 	m.PutType(mID)
 	m.PutID(id)
 }
