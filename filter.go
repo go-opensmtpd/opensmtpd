@@ -178,7 +178,7 @@ type Filter struct {
 	Version uint32
 
 	c net.Conn
-	m *message
+	m *Message
 
 	hooks   int
 	flags   int
@@ -190,7 +190,7 @@ type Filter struct {
 func (f *Filter) Register() error {
 	var err error
 	if f.m == nil {
-		f.m = new(message)
+		f.m = new(Message)
 	}
 	if f.c == nil {
 		if f.c, err = newConn(0); err != nil {
@@ -230,13 +230,13 @@ func (f *Filter) Register() error {
 		f.hooks |= hookCommit
 	}
 
-	if t, ok := filterTypeName[f.m.Type]; ok {
+	if t, ok := filterTypeName[f.m.Header.Type]; ok {
 		log.Printf("filter: imsg %s\n", t)
 	} else {
-		log.Printf("filter: imsg UNKNOWN %d\n", f.m.Type)
+		log.Printf("filter: imsg UNKNOWN %d\n", f.m.Header.Type)
 	}
 
-	switch f.m.Type {
+	switch f.m.Header.Type {
 	case typeFilterRegister:
 		var err error
 		if f.Version, err = f.m.GetTypeUint32(); err != nil {
@@ -248,14 +248,14 @@ func (f *Filter) Register() error {
 		log.Printf("register version=%d,name=%q\n", f.Version, f.Name)
 
 		f.m.reset()
-		f.m.Type = typeFilterRegister
+		f.m.Header.Type = typeFilterRegister
 		f.m.PutTypeInt(f.hooks)
 		f.m.PutTypeInt(f.flags)
 		if err = f.m.WriteTo(f.c); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("filter: unexpected imsg type=%s\n", filterTypeName[f.m.Type])
+		return fmt.Errorf("filter: unexpected imsg type=%s\n", filterTypeName[f.m.Header.Type])
 	}
 
 	f.ready = true
@@ -274,7 +274,7 @@ func (f *Filter) Serve() error {
 	}
 
 	if f.m == nil {
-		f.m = new(message)
+		f.m = new(Message)
 	}
 	if f.session == nil {
 		if f.session, err = lru.New(1024); err != nil {
@@ -300,13 +300,13 @@ func (f *Filter) Serve() error {
 }
 
 func (f *Filter) handle() (err error) {
-	if t, ok := filterTypeName[f.m.Type]; ok {
+	if t, ok := filterTypeName[f.m.Header.Type]; ok {
 		log.Printf("filter: imsg %s\n", t)
 	} else {
-		log.Printf("filter: imsg UNKNOWN %d\n", f.m.Type)
+		log.Printf("filter: imsg UNKNOWN %d\n", f.m.Header.Type)
 	}
 
-	switch f.m.Type {
+	switch f.m.Header.Type {
 	case typeFilterEvent:
 		if err = f.handleEvent(); err != nil {
 			return
@@ -488,8 +488,8 @@ func (f *Filter) respond(s *Session, status, code int, line string) error {
 		return nil
 	}
 
-	m := new(message)
-	m.Type = typeFilterResponse
+	m := new(Message)
+	m.Header.Type = typeFilterResponse
 	m.PutTypeID(s.qid)
 	m.PutTypeInt(s.qtype)
 	if s.qtype == queryEOM {

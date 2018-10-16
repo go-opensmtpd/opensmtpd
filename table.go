@@ -39,6 +39,21 @@ func procTableName(t uint32) string {
 	return fmt.Sprintf("UNKNOWN %d", t)
 }
 
+// Table services.
+const (
+	TableAlias       = 0x001 /* returns struct expand	*/
+	TableDomain      = 0x002 /* returns struct destination	*/
+	TableCredentials = 0x004 /* returns struct credentials	*/
+	TableNetAddr     = 0x008 /* returns struct netaddr	*/
+	TableUserInfo    = 0x010 /* returns struct userinfo	*/
+	TableSource      = 0x020 /* returns struct source	*/
+	TableMailAddr    = 0x040 /* returns struct mailaddr	*/
+	TableAddrName    = 0x080 /* returns struct addrname	*/
+	TableMailAddrMap = 0x100 /* returns struct maddrmap	*/
+	TableRelayHost   = 0x200 /* returns struct relayhost	*/
+	TableString      = 0x400
+)
+
 // Table implements the OpenSMTPD table API
 type Table struct {
 	// Update callback
@@ -57,7 +72,7 @@ type Table struct {
 	Close func() error
 
 	c      net.Conn
-	m      *message
+	m      *Message
 	closed bool
 }
 
@@ -68,17 +83,17 @@ func (t *Table) Serve() error {
 		return err
 	}
 
-	t.m = new(message)
+	t.m = new(Message)
 
 	for !t.closed {
 		if err = t.m.ReadFrom(t.c); err != nil {
 			if err.Error() != "resource temporarily unavailable" {
-				break
+				return fmt.Errorf("read error: %v", err)
 			}
 		}
-		debugf("table: %s", procTableName(t.m.Type))
+		debugf("table: %s", procTableName(t.m.Header.Type))
 		if err = t.dispatch(); err != nil {
-			break
+			return fmt.Errorf("dispatch error: %v", err)
 		}
 	}
 
@@ -91,7 +106,7 @@ type tableOpenParams struct {
 }
 
 func (t *Table) dispatch() (err error) {
-	switch t.m.Type {
+	switch t.m.Header.Type {
 	case procTableOpen:
 		/*
 			var op tableOpenParams
@@ -120,12 +135,12 @@ func (t *Table) dispatch() (err error) {
 			fatal("table: no name supplied by smtpd!?")
 		}
 
-		debugf("table: version=%d,name=%q\n", version, name)
+		debugf("table: version=%d name=%q\n", version, name)
 
-		m := new(message)
-		m.Type = procTableOK
-		m.Len = imsgHeaderSize
-		m.PID = uint32(os.Getpid())
+		m := new(Message)
+		m.Header.Type = procTableOK
+		m.Header.Len = imsgHeaderSize
+		m.Header.PID = uint32(os.Getpid())
 		if err = m.WriteTo(t.c); err != nil {
 			return
 		}
@@ -139,8 +154,8 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(message)
-		m.Type = procTableOK
+		m := new(Message)
+		m.Header.Type = procTableOK
 		m.PutInt(r)
 		if err = m.WriteTo(t.c); err != nil {
 			return
@@ -184,6 +199,14 @@ func (t *Table) dispatch() (err error) {
 
 		log.Printf("table_check: result=%d\n", r)
 
+		m := new(Message)
+		m.Header.Type = procTableOK
+		m.Header.PID = uint32(os.Getpid())
+		m.PutInt(r)
+		if err = m.WriteTo(t.c); err != nil {
+			return
+		}
+
 	case procTableLookup:
 		var service int
 		if service, err = t.m.GetInt(); err != nil {
@@ -210,9 +233,9 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(message)
-		m.Type = procTableOK
-		m.PID = uint32(os.Getpid())
+		m := new(Message)
+		m.Header.Type = procTableOK
+		m.Header.PID = uint32(os.Getpid())
 		if val == "" {
 			m.PutInt(-1)
 		} else {
@@ -244,9 +267,9 @@ func (t *Table) dispatch() (err error) {
 			}
 		}
 
-		m := new(message)
-		m.Type = procTableOK
-		m.PID = uint32(os.Getpid())
+		m := new(Message)
+		m.Header.Type = procTableOK
+		m.Header.PID = uint32(os.Getpid())
 		if val == "" {
 			m.PutInt(-1)
 		} else {

@@ -7,7 +7,7 @@ func ExampleFilter() {
 	filter := &Filter{
 		HELO: func(session *Session, helo string) error {
 			if helo == "test" {
-				return session.Reject()
+				return session.Reject(FilterOK, 0)
 			}
 			return session.Accept()
 		},
@@ -16,7 +16,7 @@ func ExampleFilter() {
 	// Add another hook
 	filter.MAIL = func(session *Session, user, domain string) error {
 		if strings.ToLower(domain) == "example.org" {
-			return session.Reject()
+			return session.Reject(FilterOK, 0)
 		}
 		return session.Accept()
 	}

@@ -20,8 +20,8 @@ const (
 	maxDomainPartSize = (255 + 1)
 )
 
-// messageHeader is the header of an imsg frame (struct imsg_hdr)
-type messageHeader struct {
+// MessageHeader is the header of an imsg frame (struct imsg_hdr)
+type MessageHeader struct {
 	Type   uint32
 	Len    uint16
 	Flags  uint16
@@ -30,8 +30,10 @@ type messageHeader struct {
 }
 
 // message implements OpenBSD imsg
-type message struct {
-	messageHeader
+type Message struct {
+	Header MessageHeader
+
+	// Data is the Message payload.
 	Data []byte
 
 	// rpos is the read position in the current Data
@@ -41,12 +43,12 @@ type message struct {
 	buf []byte
 }
 
-func (m *message) reset() {
-	m.Type = 0
-	m.Len = 0
-	m.Flags = 0
-	m.PeerID = imsgVersion
-	m.PID = uint32(os.Getpid())
+func (m *Message) reset() {
+	m.Header.Type = 0
+	m.Header.Len = 0
+	m.Header.Flags = 0
+	m.Header.PeerID = imsgVersion
+	m.Header.PID = uint32(os.Getpid())
 	m.Data = m.Data[:0]
 	m.rpos = 0
 	m.buf = m.buf[:0]
@@ -54,22 +56,22 @@ func (m *message) reset() {
 
 // ReadFrom reads a message from the specified net.Conn, parses the header and
 // reads the data payload.
-func (m *message) ReadFrom(c net.Conn) error {
+func (m *Message) ReadFrom(r io.Reader) error {
 	m.reset()
 
 	head := make([]byte, imsgHeaderSize)
-	if _, err := c.Read(head); err != nil {
+	if _, err := r.Read(head); err != nil {
 		return err
 	}
 
-	r := bytes.NewBuffer(head)
-	if err := binary.Read(r, binary.LittleEndian, &m.messageHeader); err != nil {
+	buf := bytes.NewBuffer(head)
+	if err := binary.Read(buf, binary.LittleEndian, &m.Header); err != nil {
 		return err
 	}
-	debugf("imsg header: %+v\n", m.messageHeader)
+	debugf("imsg header: %+v\n", m.Header)
 
-	data := make([]byte, m.messageHeader.Len-imsgHeaderSize)
-	if _, err := c.Read(data); err != nil {
+	data := make([]byte, m.Header.Len-imsgHeaderSize)
+	if _, err := r.Read(data); err != nil {
 		return err
 	}
 	m.Data = data
@@ -79,22 +81,22 @@ func (m *message) ReadFrom(c net.Conn) error {
 }
 
 // WriteTo marshals the message to wire format and sends it to the net.Conn
-func (m *message) WriteTo(c net.Conn) error {
-	m.Len = uint16(len(m.Data)) + imsgHeaderSize
+func (m *Message) WriteTo(w io.Writer) error {
+	m.Header.Len = uint16(len(m.Data)) + imsgHeaderSize
 
 	buf := new(bytes.Buffer)
-	debugf("imsg header: %+v\n", m.messageHeader)
-	if err := binary.Write(buf, binary.LittleEndian, &m.messageHeader); err != nil {
+	debugf("imsg header: %+v\n", m.Header)
+	if err := binary.Write(buf, binary.LittleEndian, &m.Header); err != nil {
 		return err
 	}
 	buf.Write(m.Data)
 	debugf("imsg send: %d / %q\n", buf.Len(), buf.Bytes())
 
-	_, err := c.Write(buf.Bytes())
+	_, err := w.Write(buf.Bytes())
 	return err
 }
 
-func (m *message) GetInt() (int, error) {
+func (m *Message) GetInt() (int, error) {
 	if m.rpos+4 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -103,7 +105,7 @@ func (m *message) GetInt() (int, error) {
 	return int(i), nil
 }
 
-func (m *message) GetUint32() (uint32, error) {
+func (m *Message) GetUint32() (uint32, error) {
 	if m.rpos+4 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -112,7 +114,7 @@ func (m *message) GetUint32() (uint32, error) {
 	return u, nil
 }
 
-func (m *message) GetSize() (uint64, error) {
+func (m *Message) GetSize() (uint64, error) {
 	if m.rpos+8 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -121,7 +123,7 @@ func (m *message) GetSize() (uint64, error) {
 	return u, nil
 }
 
-func (m *message) GetString() (string, error) {
+func (m *Message) GetString() (string, error) {
 	o := bytes.IndexByte(m.Data[m.rpos:], 0)
 	if o < 0 {
 		return "", errors.New("imsg: string not NULL-terminated")
@@ -132,7 +134,7 @@ func (m *message) GetString() (string, error) {
 	return s, nil
 }
 
-func (m *message) GetID() (uint64, error) {
+func (m *Message) GetID() (uint64, error) {
 	if m.rpos+8 > len(m.Data) {
 		return 0, io.ErrShortBuffer
 	}
@@ -174,7 +176,7 @@ func (sa Sockaddr) String() string {
 	return fmt.Sprintf("%s:%d", sa.IP(), sa.Port())
 }
 
-func (m *message) GetSockaddr() (net.Addr, error) {
+func (m *Message) GetSockaddr() (net.Addr, error) {
 	s, err := m.GetSize()
 	if err != nil {
 		return nil, err
@@ -190,7 +192,7 @@ func (m *message) GetSockaddr() (net.Addr, error) {
 	return a, nil
 }
 
-func (m *message) GetMailaddr() (user, domain string, err error) {
+func (m *Message) GetMailaddr() (user, domain string, err error) {
 	var buf [maxLocalPartSize + maxDomainPartSize]byte
 	if maxLocalPartSize+maxDomainPartSize > len(m.Data[m.rpos:]) {
 		return "", "", io.ErrShortBuffer
@@ -202,7 +204,7 @@ func (m *message) GetMailaddr() (user, domain string, err error) {
 	return
 }
 
-func (m *message) GetType(t uint8) error {
+func (m *Message) GetType(t uint8) error {
 	if m.rpos >= len(m.Data) {
 		return io.ErrShortBuffer
 	}
@@ -215,102 +217,102 @@ func (m *message) GetType(t uint8) error {
 	return nil
 }
 
-func (m *message) GetTypeInt() (int, error) {
+func (m *Message) GetTypeInt() (int, error) {
 	if err := m.GetType(mINT); err != nil {
 		return 0, err
 	}
 	return m.GetInt()
 }
 
-func (m *message) GetTypeUint32() (uint32, error) {
+func (m *Message) GetTypeUint32() (uint32, error) {
 	if err := m.GetType(mUINT32); err != nil {
 		return 0, err
 	}
 	return m.GetUint32()
 }
 
-func (m *message) GetTypeSize() (uint64, error) {
+func (m *Message) GetTypeSize() (uint64, error) {
 	if err := m.GetType(mSIZET); err != nil {
 		return 0, err
 	}
 	return m.GetSize()
 }
 
-func (m *message) GetTypeString() (string, error) {
+func (m *Message) GetTypeString() (string, error) {
 	if err := m.GetType(mSTRING); err != nil {
 		return "", err
 	}
 	return m.GetString()
 }
 
-func (m *message) GetTypeID() (uint64, error) {
+func (m *Message) GetTypeID() (uint64, error) {
 	if err := m.GetType(mID); err != nil {
 		return 0, err
 	}
 	return m.GetID()
 }
 
-func (m *message) GetTypeSockaddr() (net.Addr, error) {
+func (m *Message) GetTypeSockaddr() (net.Addr, error) {
 	if err := m.GetType(mSOCKADDR); err != nil {
 		return nil, err
 	}
 	return m.GetSockaddr()
 }
 
-func (m *message) GetTypeMailaddr() (user, domain string, err error) {
+func (m *Message) GetTypeMailaddr() (user, domain string, err error) {
 	if err = m.GetType(mMAILADDR); err != nil {
 		return
 	}
 	return m.GetMailaddr()
 }
 
-func (m *message) PutInt(v int) {
+func (m *Message) PutInt(v int) {
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], uint32(v))
 	m.Data = append(m.Data, b[:]...)
-	m.Len += 4
+	m.Header.Len += 4
 }
 
-func (m *message) PutUint32(v uint32) {
+func (m *Message) PutUint32(v uint32) {
 	var b [4]byte
 	binary.LittleEndian.PutUint32(b[:], v)
 	m.Data = append(m.Data, b[:]...)
-	m.Len += 4
+	m.Header.Len += 4
 }
 
-func (m *message) PutString(s string) {
+func (m *Message) PutString(s string) {
 	m.Data = append(m.Data, append([]byte(s), 0)...)
-	m.Len += uint16(len(s)) + 1
+	m.Header.Len += uint16(len(s)) + 1
 }
 
-func (m *message) PutID(id uint64) {
+func (m *Message) PutID(id uint64) {
 	var b [8]byte
 	binary.LittleEndian.PutUint64(b[:], id)
 	m.Data = append(m.Data, b[:]...)
-	m.Len += 8
+	m.Header.Len += 8
 }
 
-func (m *message) PutType(t uint8) {
+func (m *Message) PutType(t uint8) {
 	m.Data = append(m.Data, t)
-	m.Len += 1
+	m.Header.Len += 1
 }
 
-func (m *message) PutTypeInt(v int) {
+func (m *Message) PutTypeInt(v int) {
 	m.PutType(mINT)
 	m.PutInt(v)
 }
 
-func (m *message) PutTypeUint32(v uint32) {
+func (m *Message) PutTypeUint32(v uint32) {
 	m.PutType(mUINT32)
 	m.PutUint32(v)
 }
 
-func (m *message) PutTypeString(s string) {
+func (m *Message) PutTypeString(s string) {
 	m.PutType(mSTRING)
 	m.PutString(s)
 }
 
-func (m *message) PutTypeID(id uint64) {
+func (m *Message) PutTypeID(id uint64) {
 	m.PutType(mID)
 	m.PutID(id)
 }

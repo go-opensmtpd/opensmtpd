@@ -8,13 +8,13 @@ import (
 
 const (
 	// FilterVersion is the supported filter API version
-	FilterVersion = 51
+	FilterVersion = 52
 
 	// QueueVersion is the supported queue API version
-	QueueVersion = 1
+	QueueVersion = 2
 
 	// TableVersion is the supported table API version
-	TableVersion = 1
+	TableVersion = 2
 )
 
 var (
@@ -36,19 +36,23 @@ const (
 	ServiceMailaddr    = 0x040
 	ServiceAddrname    = 0x080
 	ServiceMailaddrMap = 0x100
+	ServiceRelayHost   = 0x200
+	ServiceString      = 0x400
 	ServiceAny         = 0xfff
 )
 
 var serviceTypeName = map[int]string{
-	ServiceAlias:       "ALIAS",
-	ServiceDomain:      "DOMAIN",
-	ServiceCredentials: "CREDENTIALS",
-	ServiceNetaddr:     "NETADDR",
-	ServiceUserinfo:    "USERINFO",
-	ServiceSource:      "SOURCE",
-	ServiceMailaddr:    "MAILADDR",
-	ServiceAddrname:    "ADDRNAME",
-	ServiceMailaddrMap: "MAILADDRMAP",
+	ServiceAlias:       "alias",
+	ServiceDomain:      "domain",
+	ServiceCredentials: "credentials",
+	ServiceNetaddr:     "netaddr",
+	ServiceUserinfo:    "userinfo",
+	ServiceSource:      "source",
+	ServiceMailaddr:    "mailaddr",
+	ServiceAddrname:    "addrname",
+	ServiceMailaddrMap: "maddrmap",
+	ServiceRelayHost:   "relayhost",
+	ServiceString:      "string",
 }
 
 func serviceName(service int) string {
