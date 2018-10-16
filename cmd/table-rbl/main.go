@@ -11,7 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/hcl"
-	opensmtpd "gopkg.in/opensmtpd.v0"
+	opensmtpd "gopkg.in/opensmtpd.v52"
 )
 
 var (
