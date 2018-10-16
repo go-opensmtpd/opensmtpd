@@ -5,8 +5,8 @@ Package opensmtpd implements OpenSMTPD APIs
 APIs in OpenSMTPD
 
 The APIs in OpenSMTPD are not stable and subject to change. The filter versions
-implemented by this package are tested against OpenSMTPD-portable version 6.0.2
-(as supplied by Debian Jessie (backports) and Debian Stretch).
+implemented by this package are tested against OpenSMTPD-portable version
+6.0.3.
 
 
 Filters
